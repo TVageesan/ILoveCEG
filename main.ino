@@ -6,35 +6,14 @@ MeLineFollower lineFinder(PORT_2);
 MeDCMotor leftMotor(M1); // assigning leftMotor to port M1
 MeDCMotor rightMotor(M2); // assigning RightMotor to port M2
 MePort IR(PORT_3); //A2 -> IR , A3 -> LDR
-#define CONTROL1 A0
-#define CONTROL2 A1
-#define IR A2
 #define ULTRASONIC 12
-int red_v,blue_v,green_v,white_v;
+
 //variables
 #define TURN_TIME 330
-#define TIMEOUT 200000
+#define TIMEOUT 2000
 #define FAST  235
 #define SLOW  165
-
-
-
-//Sensor Package
-float detect(){
-  pinMode(ULTRASONIC,OUTPUT);
-  digitalWrite(ULTRASONIC, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(ULTRASONIC, LOW);
-  pinMode(ULTRASONIC,INPUT);
-  long cms = pulseIn(ULTRASONIC,HIGH,TIMEOUT)* 0.01725;
-  Serial.print("Distance from wall: ");
-  Serial.println(cms);
-  return cms;
-}
-
-int linefollow(){
-  return lineFinder.readSensors();
-}
+int red,blue,green,white;
 
 //Movement Package
 void stop(){
@@ -42,57 +21,28 @@ void stop(){
   rightMotor.run(0);
 }
 
-void forward(int time){
-  leftMotor.run(-FAST);
-  rightMotor.run(FAST);
-  delay(time); 
-  stop();
-}
-
-void turn(int left, int right, int time = TURN_TIME){
+void move(int left, int right, int time = TURN_TIME){ //supply {left} power to left motor, {right} power for right motor for {time} ms
   leftMotor.run(left);
   rightMotor.run(right);
   delay(time);
   stop();
 }
 
-void moveTillBlack(){
-    while (lineFinder.readSensors() == S1_OUT_S2_OUT){
-      if (detect()>13){
-      leftMotor.run(-FAST);
-      rightMotor.run(SLOW);
-      }
-      else if (detect() < 8){
-        leftMotor.run(-SLOW);
-        rightMotor.run(FAST);
-      }
-      else{
-        leftMotor.run(-FAST);
-        rightMotor.run(FAST);
-      }
-    }
-    
-    stop();
-    while (lineFinder.readSensors() == S1_OUT_S2_IN){
-      turn(-SLOW,-SLOW,100);
-    }
-    while (lineFinder.readSensors() == S1_IN_S2_OUT){
-      turn(SLOW,SLOW,100);
-    }
+void forward(int time){ //move forward for {time} ms
+  move(-FAST,FAST,time);
 }
-
 
 //left turn : red
 void left(){
-  turn(FAST,FAST);
+  move(FAST,FAST);
 } 
 //righ turn : green
 void right(){
-  turn(-FAST,-FAST);
+  move(-FAST,-FAST);
 }
 //spin in place : orange
 void spinaround(){
-  turn(FAST,FAST,2*TURN_TIME);
+  move(FAST,FAST,2*TURN_TIME);
 }
 //double left : purple
 void doubleleft(){
@@ -111,72 +61,94 @@ void end(){
   //celebrate();
 }
 
-//fourth test: IR reading and ultrasonic readings
-void loop_4(){
-  detect();
+
+//Sensor Package
+
+float detect(){
+  pinMode(ULTRASONIC,OUTPUT);
+  digitalWrite(ULTRASONIC, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(ULTRASONIC, LOW);
+  pinMode(ULTRASONIC,INPUT);
+  return pulseIn(ULTRASONIC,HIGH,TIMEOUT) * 0.01725;
 }
 
-//third test: calibrating turns
-void loop_3(){
-  turn(SLOW,SLOW,500);
-  stop();
-  while(1){}
-}
-
-//second test: move up to black strip and turn left
-void loop_2(){
-  moveTillBlack();
-  left();
-  while(1){}
-}
-
-
-
-void blue(){
-  digitalWrite(A0,HIGH);
-  digitalWrite(A1,LOW);
-}
-
-void green(){
-  digitalWrite(A0,LOW);
-  digitalWrite(A1,HIGH);
-}
-
-void red(){
-  digitalWrite(A0,HIGH);
-  digitalWrite(A1,HIGH);
-}
-
-void white(){
-  digitalWrite(A0,LOW);
-  digitalWrite(A1,LOW);
-}
-
-
-
-
-void led_cycle(){ 
-  red();
+int read_colour(int A0_VAL,int A1_VAL){
+  digitalWrite(A0,A0_VAL);
+  digitalWrite(A1,A1_VAL);
   delay(200);
-  red_v = analogRead(A3);
-  green();
-  delay(200);
-  green_v = analogRead(A3);
-  blue();
-  delay(200);
-  blue_v = analogRead(A3);
-  white();
-  delay(200);
-  white_v = analogRead(A3);
+  return analogRead(A3);
+}
+
+//Advanced Actions
+
+void moveTillBlack(){
+    while (lineFinder.readSensors() == S1_OUT_S2_OUT){
+      float dist = detect();
+      Serial.print("Distance:");
+      Serial.println(dist);
+      if (dist>13){ //if distance from right wall > 13cm, adjust right
+      leftMotor.run(-FAST);
+      rightMotor.run(SLOW);
+      }
+      else if (0<dist<8){ // if distance from right wall < 8 cm, adjust left
+        leftMotor.run(-SLOW);
+        rightMotor.run(FAST);
+      }
+      else{ //if dist == 0 (no wall) or 8<dist<13 keep going straight
+        leftMotor.run(-FAST);
+        rightMotor.run(FAST);
+      }
+    }
+    
+    stop();
+
+    //Nudge if slightly off
+    while (lineFinder.readSensors() == S1_OUT_S2_IN){
+      move(-SLOW,-SLOW,100);
+    }
+    while (lineFinder.readSensors() == S1_IN_S2_OUT){
+      move(SLOW,SLOW,100);
+    }
+}
+
+void colourAction(){ 
+  red = read_colour(HIGH,HIGH);
+  green = read_colour(LOW,HIGH);
+  blue = read_colour(HIGH,LOW);
+  white = read_colour(LOW,LOW);
+  /*
   Serial.print("Red ");
-  Serial.print(red_v);
+  Serial.print(red);
   Serial.print("Green ");
-  Serial.print(green_v);
+  Serial.print(green);
   Serial.print("Blue ");
-  Serial.print(blue_v);
+  Serial.print(blue);
   Serial.print("White ");
-  Serial.println(white_v);
+  Serial.println(white);
+  */
+  Serial.print("Predicting Colour:");
+  if (red > 600 && green > 600 && blue > 600) { // WHITE
+   Serial.println("White");
+  } 
+  else if (red < 350 && green < 350 && blue < 350) { //BLACK
+   Serial.println("Black");
+  } 
+  else if (blue > red - 50 && blue > green) { //BLUE
+   Serial.println("Blue");
+  } 
+  else if (green > red - 50 && green > blue) { //GREEN
+   Serial.println("Green");
+  } 
+  else if (white < 180){ // RED
+   Serial.println("Red");
+  }
+  else { // ORANGE
+   Serial.println("Orange or Purple");
+  }
 }
+
+//MAIN
 
 void setup()
 {
@@ -186,23 +158,11 @@ void setup()
   digitalWrite(ULTRASONIC, LOW);
   pinMode(A0,OUTPUT);
   pinMode(A1,OUTPUT);
-  white();
-}
-
-void loop_cycle(){
-  led_cycle();
-}
-void loop_sensor(){
   digitalWrite(A0,LOW);
   digitalWrite(A1,LOW);
-  Serial.print("IR value: ");
-  Serial.println(analogRead(A2));
-  //Serial.print("LDR value: ");
-  //Serial.println(analogRead(A3));
-  delay(1000);
 }
 
-//retest: see if its a battery issue
+//run naive loop with no colour sensing
 void loop() {
   moveTillBlack();
   left();
@@ -212,5 +172,18 @@ void loop() {
   while(1){}
 }
 
+void final_loop() {
+  moveTillBlack();
+  colourAction();
+}
 
+void loop_sensor(){
+  digitalWrite(A0,LOW);
+  digitalWrite(A1,LOW);
+  Serial.print("IR value: ");
+  Serial.println(analogRead(A2));
+  //Serial.print("LDR value: ");
+  //Serial.println(analogRead(A3));
+  delay(1000);
+}
 
