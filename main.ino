@@ -147,7 +147,7 @@ int IR(){
   digitalWrite(A1,HIGH); // IR OFF
   delay(200);
   low = analogRead(A2);
-  digitalWrite(A0,LOW); // IR ON, RESET
+  digitalWrite(A1,LOW); // IR ON, RESET
   return high - low;
 }
 
@@ -209,24 +209,24 @@ void colourAction(){
     colourArray[c] = ((read_colour(conv[c][0],conv[c][1]) - blackArray[c])/(whiteArray[c] - blackArray[c])) *  255;
     delay(200);
   } 
-  Serial.println("Received colour arr");
+  Serial.println("Received colour arr ");
   Serial.print("Red: ");
   Serial.print(colourArray[0]);
-  Serial.print("Green: ");
+  Serial.print(" Green: ");
   Serial.print(colourArray[1]);
-  Serial.print("Blue: ");
+  Serial.print(" Blue: ");
   Serial.println(colourArray[2]);
   int result = compareArr();
   if (result == -1){
     Serial.println("ggs can't determine colour");
     return;
   }
-  else{
-    Serial.print("result ");
-    Serial.println(result);
-    Serial.print("colour ");
-    Serial.println(names[result]);
-  }
+  
+  Serial.print("result ");
+  Serial.println(result);
+  Serial.print("colour ");
+  Serial.println(names[result]);
+  
   /*
   switch (result) {
     case 0: //red
