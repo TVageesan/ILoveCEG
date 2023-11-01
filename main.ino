@@ -1,16 +1,3 @@
-//Notes;
-// For Movement calibration:
-// Try a longer ultrasound timeout to calibrate distance
-// Test specifically cms value when ultrasound timeout is called -> maybe it doesnt compare to 0, leads to left turn instead of 8
-// For colour calibration (!!!!READ ME SARAH!!!!)
-// Variables you can tweak to make colour calibration work:
-// RANGE: Set integer range for comparing colours
-// ex. if expected number is 200, with range 10 we accept any number from 190 - 210
-// can try expanding this range as far as possible before colours begin to mix, i.e. orange gets detected as red.
-// COLOURS: Array of array of expected RGB values for a given colour
-// use the names array to keep track of which rgb list is which. ex. "red" in index 0 of names arr is linked to {182,90,86} in index 0 of colours arr
-// can rewrite the rgb values if you get a new RGB baseline during testing, though ideally our baseline shouldn't change much
-
 //imports
 #include "MeMCore.h"
 
@@ -21,34 +8,15 @@ MeDCMotor rightMotor(M2); // assigning RightMotor to port M2
 #define ULTRASONIC 12
 
 //variables
-#define TURN_TIME 400
-#define TIMEOUT 5000
+#define TURN_TIME 200
+#define TIMEOUT 3000
 #define FAST  200
 #define SLOW  160
-#define RANGE 10
 
-int conv[4][2] = {{HIGH,HIGH},{HIGH,LOW},{LOW,HIGH},{LOW,LOW}}; // Flash LED red, green, blue, off
+int conv[4][2] = {{HIGH,HIGH},{LOW,HIGH},{HIGH,LOW},{LOW,LOW}}; // Flash LED red, green, blue, off
 float colourArray[3] = {0,0,0};
 float whiteArray[3] = {820,891,922};
 float blackArray[3] = {372,518,661};
-
-const char *names[6] = {
-  "red",
-  "green",
-  "orange",
-  "purple",
-  "blue",
-  "white"
-};
-
-float colours[6][3] = {
-  {182,90,86},
-  {63,170,112},
-  {221,165,126},
-  {145,148,198},
-  {97,174,226},
-  {255,255,255}
-};
 
 //Movement Package
 void stop(){
@@ -69,26 +37,26 @@ void forward(int time){ //move forward for {time} ms
 
 //left turn : red
 void left(){
-  move(FAST,FAST);
+  move(SLOW,SLOW);
 } 
 //righ turn : green
 void right(){
-  move(-FAST,-FAST);
+  move(-SLOW,-SLOW);
 }
 //spin in place : orange
 void spinaround(){
-  move(FAST,FAST,2*TURN_TIME);
+  move(SLOW,SLOW,2*TURN_TIME);
 }
 //double left : purple
 void doubleleft(){
   left();
-  forward(500);
+  forward(1000);
   left();
 }
 //double right :lightblue
 void doubleright(){
   right();
-  forward(500);
+  forward(1000);
   right();
 }
 //end point : white
@@ -102,12 +70,12 @@ void moveTillBlack(){
       Serial.print("Distance:");
       Serial.println(dist);
       if (dist>13){ //if distance from right wall > 13cm, adjust right
-      leftMotor.run(-FAST);
-      rightMotor.run(SLOW);
+      leftMotor.run(-SLOW);
+      rightMotor.run(FAST);
       }
-      else if (0<dist<8){ // if distance from right wall < 8 cm, adjust left
-        leftMotor.run(-SLOW);
-        rightMotor.run(FAST);
+      else if (dist<8){ // if distance from right wall < 8 cm, adjust left
+        leftMotor.run(-FAST);
+        rightMotor.run(SLOW);
       }
       else{ //if dist == 0 (no wall) or 8<dist<13 keep going straight
         leftMotor.run(-FAST);
@@ -128,7 +96,6 @@ void moveTillBlack(){
 
 
 //Sensor Package
-
 float detect(){
   pinMode(ULTRASONIC,OUTPUT);
   digitalWrite(ULTRASONIC, HIGH);
@@ -150,31 +117,21 @@ int IR(){
   return high - low;
 }
 
-int compareArr(){ //compares global arr colourArray and colours array
-  for (int i = 0; i < 6 ;i++){
-    int check = 0;
-    for (int c = 0; c < 3;c++){
-      if (((colours[i][c] - RANGE) <= colourArray[c]) && (colourArray[c] <= ( colours[i][c] + RANGE))){
-        check += 1;
-        Serial.println("match");
-      };
-    };
-    if (check == 3) return i;
-  };
-  return -1;
-};
-
 float read_colour(int A0_VAL,int A1_VAL){
   float reading = 0;
   digitalWrite(A0,A0_VAL);
   digitalWrite(A1,A1_VAL);
   delay(200);
+  reading = analogRead(A3);
+  return reading;
+  /*
   //get average of 5 readings
   for (int i = 0; i < 5; i++){
     reading += analogRead(A3);
     delay(10);
   }
   return (reading/5);
+  */
 }
 
 void setBalance(){
@@ -203,85 +160,41 @@ void setBalance(){
   //delay another 5 seconds for getting ready colour objects
   Serial.println("Colour Sensor Is Ready.");
 }
-
-float red,blue,green;
+float red,green,blue;
 
 void colourAction(){
   for (int c = 0; c <= 2;c++){
     colourArray[c] = ((read_colour(conv[c][0],conv[c][1]) - blackArray[c])/(whiteArray[c] - blackArray[c])) *  255;
     delay(200);
   } 
-  red = (read_colour(conv[c][0],conv[c][1]) - blackArray[c])/(whiteArray[c] - blackArray[c])) *  255;
+  red = colourArray[0];
   blue = colourArray[1];
   green = colourArray[2];
   Serial.print("red:");
-  Serial.println(colourArray[0]);
+  Serial.println(red);
   Serial.print("green: ");
   Serial.println(green);
   Serial.print("blue: ");
   Serial.println(blue);
   if ((red >= 200) && (blue >= 200) && (green >= 200)){
-    Serial.println("white");
+    Serial.println("white"); //END
   }
-  else if ((blue >= 200) && (red <= 120) && (green <= 200)){
-    Serial.println("blue");
+  else if (blue >= 200){
+    Serial.println("blue"); //DOUBLE RIGHT
   }
-  else if ((red >= 180) && (blue <= 120) && (green <= 120)){
-    Serial.println("red");
+  else if ((green >= 110) && (red <= 80)){ 
+    Serial.println("green"); //RIGHT
   }
-  else if ((green >= 160) && (blue <= 120) && (green <= 120)){
-    Serial.println("green");
+  else if (red >= 190){ 
+    if ( green >= 130 ){
+      Serial.println("orange");//180 TURN
+    }else{
+      Serial.println("red");//LEFT
+    }
   }
-}
-
-void colourAction2(){
-  for (int c = 0; c <= 2;c++){
-    colourArray[c] = ((read_colour(conv[c][0],conv[c][1]) - blackArray[c])/(whiteArray[c] - blackArray[c])) *  255;
-    delay(200);
-  } 
-  
-
-  Serial.println("Received colour arr");
-  Serial.print("Red: ");
-  Serial.print(colourArray[0]);
-  Serial.print("Green: ");
-  Serial.print(colourArray[1]);
-  Serial.print("Blue: ");
-  Serial.println(colourArray[2]);
-  int result = compareArr();
-  if (result == -1){
-    Serial.println("ggs can't determine colour");
-    return;
+  else {
+    Serial.println("Burple");//DOUBLE LEFT
   }
-  else{
-    Serial.print("result ");
-    Serial.println(result);
-    Serial.print("colour ");
-    Serial.println(names[result]);
-  }
-  /*
-  switch (result) {
-    case 0: //red
-      left();
-      break;
-    case 1: //green
-      right();
-      break;
-    case 2: //orange
-      spinaround();
-      break;
-    case 3: //purple
-      doubleleft();
-      break;
-    case 4: //blue
-      doubleright();
-      break;
-    case 5: //white
-      end();
-      break;
-  }
-
-  */
 }
 
 //MAIN
@@ -295,10 +208,15 @@ void setup()
   pinMode(A1,OUTPUT);
   digitalWrite(A0,LOW);
   digitalWrite(A1,LOW);
-  //setBalance();
+  ///setBalance();
 }
 
-void loop(){//testing colour calibration
+void loop(){
+  Serial.println(IR());
+  delay(1000);
+}
+
+void loop_colour(){//testing colour calibration
   //Serial.println(IR());
   colourAction();
   delay(1000);
@@ -310,7 +228,7 @@ void final_loop() {
   colourAction();
 }
 
-void loop_www(){
+void loopwwwwww(){
   digitalWrite(A1,HIGH);
   Serial.print("IR value: ");
   delay(200);
@@ -322,7 +240,7 @@ void loop_www(){
 }
 
 //run naive loop with no colour sensing
-void loop_MOVE() {
+void loopRRR() {
   moveTillBlack();
   left();
   moveTillBlack();
@@ -340,5 +258,3 @@ void loop_MOVE() {
   moveTillBlack();
   while(1){}
 }
-
-
