@@ -1,8 +1,7 @@
-//ReadMe;
+//Notes;
 // For Movement calibration:
 // Try a longer ultrasound timeout to calibrate distance
-// Test specifically cms value when ultrasound timeout is called -> maybe it doesnt compare to 0, leads to left turn instead of straight
-// Test turning at diff speeds, establish max power turning time and forward times
+// Test specifically cms value when ultrasound timeout is called -> maybe it doesnt compare to 0, leads to left turn instead of 8
 // For colour calibration (!!!!READ ME SARAH!!!!)
 // Variables you can tweak to make colour calibration work:
 // RANGE: Set integer range for comparing colours
@@ -11,8 +10,7 @@
 // COLOURS: Array of array of expected RGB values for a given colour
 // use the names array to keep track of which rgb list is which. ex. "red" in index 0 of names arr is linked to {182,90,86} in index 0 of colours arr
 // can rewrite the rgb values if you get a new RGB baseline during testing, though ideally our baseline shouldn't change much
-// can also always verify with https://www.rapidtables.com/web/color/RGB_Color.html which rgb values is which colour
-//ALSO: look for loop_IR below if you want to test IR code 
+
 //imports
 #include "MeMCore.h"
 
@@ -31,8 +29,8 @@ MeDCMotor rightMotor(M2); // assigning RightMotor to port M2
 
 int conv[4][2] = {{HIGH,HIGH},{HIGH,LOW},{LOW,HIGH},{LOW,LOW}}; // Flash LED red, green, blue, off
 float colourArray[3] = {0,0,0};
-float whiteArray[3] = {0,0,0};
-float blackArray[3] = {0,0,0};
+float whiteArray[3] = {820,891,922};
+float blackArray[3] = {372,518,661};
 
 const char *names[6] = {
   "red",
@@ -107,7 +105,7 @@ void moveTillBlack(){
       leftMotor.run(-FAST);
       rightMotor.run(SLOW);
       }
-      else if (dist<8){ // if distance from right wall < 8 cm, adjust left
+      else if (0<dist<8){ // if distance from right wall < 8 cm, adjust left
         leftMotor.run(-SLOW);
         rightMotor.run(FAST);
       }
@@ -143,23 +141,25 @@ float detect(){
 int IR(){ 
   // starting state A0 LOW, A1 LOW , IR ON
   int high,low;
-  high = analogRead(A2);
-  digitalWrite(A1,HIGH); // IR OFF
-  delay(200);
   low = analogRead(A2);
+  delay(5);
+  digitalWrite(A1,HIGH); // IR OFF
+  delay(5);
+  high = analogRead(A2);
   digitalWrite(A1,LOW); // IR ON, RESET
   return high - low;
 }
 
-int compareArr(){ //compares global arr colourArray and colours
+int compareArr(){ //compares global arr colourArray and colours array
   for (int i = 0; i < 6 ;i++){
-    int match = 0;
+    int check = 0;
     for (int c = 0; c < 3;c++){
-      if ((colours[i][c] - RANGE) <= colourArray[c] <= (colours[i][c] + RANGE)){
-        match += 1;
+      if (((colours[i][c] - RANGE) <= colourArray[c]) && (colourArray[c] <= ( colours[i][c] + RANGE))){
+        check += 1;
+        Serial.println("match");
       };
     };
-    if (match == 3) return i;
+    if (check == 3) return i;
   };
   return -1;
 };
@@ -204,29 +204,61 @@ void setBalance(){
   Serial.println("Colour Sensor Is Ready.");
 }
 
+float red,blue,green;
+
 void colourAction(){
   for (int c = 0; c <= 2;c++){
     colourArray[c] = ((read_colour(conv[c][0],conv[c][1]) - blackArray[c])/(whiteArray[c] - blackArray[c])) *  255;
     delay(200);
   } 
-  Serial.println("Received colour arr ");
+  red = (read_colour(conv[c][0],conv[c][1]) - blackArray[c])/(whiteArray[c] - blackArray[c])) *  255;
+  blue = colourArray[1];
+  green = colourArray[2];
+  Serial.print("red:");
+  Serial.println(colourArray[0]);
+  Serial.print("green: ");
+  Serial.println(green);
+  Serial.print("blue: ");
+  Serial.println(blue);
+  if ((red >= 200) && (blue >= 200) && (green >= 200)){
+    Serial.println("white");
+  }
+  else if ((blue >= 200) && (red <= 120) && (green <= 200)){
+    Serial.println("blue");
+  }
+  else if ((red >= 180) && (blue <= 120) && (green <= 120)){
+    Serial.println("red");
+  }
+  else if ((green >= 160) && (blue <= 120) && (green <= 120)){
+    Serial.println("green");
+  }
+}
+
+void colourAction2(){
+  for (int c = 0; c <= 2;c++){
+    colourArray[c] = ((read_colour(conv[c][0],conv[c][1]) - blackArray[c])/(whiteArray[c] - blackArray[c])) *  255;
+    delay(200);
+  } 
+  
+
+  Serial.println("Received colour arr");
   Serial.print("Red: ");
   Serial.print(colourArray[0]);
-  Serial.print(" Green: ");
+  Serial.print("Green: ");
   Serial.print(colourArray[1]);
-  Serial.print(" Blue: ");
+  Serial.print("Blue: ");
   Serial.println(colourArray[2]);
   int result = compareArr();
   if (result == -1){
     Serial.println("ggs can't determine colour");
     return;
   }
-  
-  Serial.print("result ");
-  Serial.println(result);
-  Serial.print("colour ");
-  Serial.println(names[result]);
-  
+  else{
+    Serial.print("result ");
+    Serial.println(result);
+    Serial.print("colour ");
+    Serial.println(names[result]);
+  }
   /*
   switch (result) {
     case 0: //red
@@ -263,18 +295,15 @@ void setup()
   pinMode(A1,OUTPUT);
   digitalWrite(A0,LOW);
   digitalWrite(A1,LOW);
-  setBalance();
+  //setBalance();
 }
 
 void loop(){//testing colour calibration
+  //Serial.println(IR());
   colourAction();
   delay(1000);
 }
 
-void loop_IR(){ //copy this code into loop() to test IR
-  Serial.println(IR());
-  delay(1000);
-}
 void final_loop() {
   moveTillBlack();
   delay(1000);
