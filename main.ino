@@ -8,15 +8,18 @@ MeDCMotor rightMotor(M2); // assigning RightMotor to port M2
 #define ULTRASONIC 12
 
 //variables
-#define TURN_TIME 200
-#define TIMEOUT 3000
+#define TURN_TIME 330
+#define TIMEOUT 1550
 #define FAST  200
 #define SLOW  160
 
-int conv[4][2] = {{HIGH,HIGH},{LOW,HIGH},{HIGH,LOW},{LOW,LOW}}; // Flash LED red, green, blue, off
+float red,green,blue;
+int conv[4][2] = {{HIGH,HIGH},{LOW,HIGH},{HIGH,LOW},{LOW,LOW}}; // Flash LED red, blue,green, off
 float colourArray[3] = {0,0,0};
-float whiteArray[3] = {820,891,922};
-float blackArray[3] = {372,518,661};
+float whiteArray[3] = {872,789,801};
+float blackArray[3] = {527,474,458};
+float detect();
+int IR();
 
 //Movement Package
 void stop(){
@@ -64,12 +67,39 @@ void end(){
   //celebrate();
 }
 
-void moveTillBlack(){
+void adjustLeft(){
+  leftMotor.run(-SLOW);
+  rightMotor.run(FAST);
+}
+void adjustRight(){
+  leftMotor.run(-FAST);
+  rightMotor.run(SLOW);
+}
+
+void straight(){
+  leftMotor.run(-FAST);
+  rightMotor.run(FAST);
+}
+
+void moveTillBlack(){ //relys mainly on 
     while (lineFinder.readSensors() == S1_OUT_S2_OUT){
       float dist = detect();
-      Serial.print("Distance:");
-      Serial.println(dist);
-      if (dist>13){ //if distance from right wall > 13cm, adjust right
+      int IR_VAL = IR();
+      if (dist == 0){ //WALL MISSING -> USE IR
+        if (IR_VAL <= 240){//WALL MISSING BOTH SIDES -> STRAIGHT
+          straight();
+        }
+        else if (IR_VAL <= 260){ // 11-9cm -> GO RIGHT
+          adjustRight();
+        }
+        else if (IR_VAL <= 280){ //6-9cm -> STAY CENTER
+          straight();
+        }
+        else { // 0-6cm -> GO LEFT
+          adjustLeft();
+        }
+      }
+      else if (dist>13){ //if distance from right wall > 13cm, adjust right
       leftMotor.run(-SLOW);
       rightMotor.run(FAST);
       }
@@ -77,7 +107,7 @@ void moveTillBlack(){
         leftMotor.run(-FAST);
         rightMotor.run(SLOW);
       }
-      else{ //if dist == 0 (no wall) or 8<dist<13 keep going straight
+      else{ //8<dist<13 keep going straight
         leftMotor.run(-FAST);
         rightMotor.run(FAST);
       }
@@ -85,7 +115,7 @@ void moveTillBlack(){
     
     stop();
 
-    //Nudge if slightly off
+    //Nudge if slightly off 
     while (lineFinder.readSensors() == S1_OUT_S2_IN){
       move(-SLOW,-SLOW,100);
     }
@@ -102,7 +132,9 @@ float detect(){
   delayMicroseconds(10);
   digitalWrite(ULTRASONIC, LOW);
   pinMode(ULTRASONIC,INPUT);
-  return pulseIn(ULTRASONIC,HIGH,TIMEOUT) * 0.01725;
+  float cms =  pulseIn(ULTRASONIC,HIGH,TIMEOUT) * 0.01725;
+  Serial.println(cms);
+  return cms;
 }
 
 int IR(){ 
@@ -114,7 +146,9 @@ int IR(){
   delay(5);
   high = analogRead(A2);
   digitalWrite(A1,LOW); // IR ON, RESET
-  return high - low;
+  int val = (high - low);
+  Serial.println(val);
+  return val;
 }
 
 float read_colour(int A0_VAL,int A1_VAL){
@@ -160,8 +194,8 @@ void setBalance(){
   //delay another 5 seconds for getting ready colour objects
   Serial.println("Colour Sensor Is Ready.");
 }
-float red,green,blue;
 
+//TODO: REPLACE SERIAL PRINTS WITH LED FLASHES
 void colourAction(){
   for (int c = 0; c <= 2;c++){
     colourArray[c] = ((read_colour(conv[c][0],conv[c][1]) - blackArray[c])/(whiteArray[c] - blackArray[c])) *  255;
@@ -178,22 +212,28 @@ void colourAction(){
   Serial.println(blue);
   if ((red >= 200) && (blue >= 200) && (green >= 200)){
     Serial.println("white"); //END
+    end();
   }
   else if (blue >= 200){
     Serial.println("blue"); //DOUBLE RIGHT
+    doubleright();
   }
   else if ((green >= 110) && (red <= 80)){ 
     Serial.println("green"); //RIGHT
+    right();
   }
-  else if (red >= 190){ 
-    if ( green >= 130 ){
+  else if (red >= 160){ 
+    if ( green >= 100 ){
       Serial.println("orange");//180 TURN
+      spinaround();
     }else{
       Serial.println("red");//LEFT
+      left();
     }
   }
   else {
     Serial.println("Burple");//DOUBLE LEFT
+    doubleleft();
   }
 }
 
@@ -208,16 +248,18 @@ void setup()
   pinMode(A1,OUTPUT);
   digitalWrite(A0,LOW);
   digitalWrite(A1,LOW);
-  ///setBalance();
-}
+  //setBalance();
+}   
 
 void loop(){
-  Serial.println(IR());
-  delay(1000);
+  moveTillBlack();
+  delay(2000);
+  colourAction();
+  
 }
 
 void loop_colour(){//testing colour calibration
-  //Serial.println(IR());
+  moveTillBlack();
   colourAction();
   delay(1000);
 }
@@ -236,6 +278,7 @@ void loopwwwwww(){
   digitalWrite(A0,LOW);
   //Serial.print("LDR value: ");
   //Serial.println(analogRead(A3));
+  
   delay(1000);
 }
 
