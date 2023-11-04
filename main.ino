@@ -301,3 +301,173 @@ void loopRRR() {
   moveTillBlack();
   while(1){}
 }
+
+MeRGBLed led(PORT_3);
+
+void setup()
+{
+}
+
+void loop_LED_blue()
+{
+  // Turn on only blue
+  uint8_t red = 0;
+  uint8_t green = 0;
+  uint8_t blue = 100;
+
+  // Set LED 0 and LED 1 to the values
+  led.setColorAt(0, red, green, blue);
+  led.setColorAt(1, red, green, blue);
+
+  // Update the LED, so that the colours show
+  led.show();
+
+  // Wait half a second, so we can see the LED's turn on
+  delay(500);
+
+  // Set the LED's to be off
+  red = 0;
+  green = 0;
+  blue = 0;
+
+  // Set LED 0 and LED 1 to the values
+  led.setColorAt(0, red, green, blue);
+  led.setColorAt(1, red, green, blue);
+
+  // Update the LED, so that the colours show
+  led.show();
+
+  // Wait half a second, so we can see the LED's turn off
+  delay(500);
+}
+void loop_LED_red()
+{
+  // Turn on only red
+  uint8_t red = 100;
+  uint8_t green = 0;
+  uint8_t blue = 0;
+
+  // Set LED 0 and LED 1 to the values
+  led.setColorAt(0, red, green, blue);
+  led.setColorAt(1, red, green, blue);
+
+  // Update the LED, so that the colours show
+  led.show();
+
+  // Wait half a second, so we can see the LED's turn on
+  delay(500);
+
+  // Set the LED's to be off
+  red = 0;
+  green = 0;
+  blue = 0;
+
+  // Set LED 0 and LED 1 to the values
+  led.setColorAt(0, red, green, blue);
+  led.setColorAt(1, red, green, blue);
+
+  // Update the LED, so that the colours show
+  led.show();
+
+  // Wait half a second, so we can see the LED's turn off
+  delay(500);
+}
+void loop_LED_green()
+{
+  // Turn on only blue
+  uint8_t red = 0;
+  uint8_t green = 100;
+  uint8_t blue = 0;
+
+  // Set LED 0 and LED 1 to the values
+  led.setColorAt(0, red, green, blue);
+  led.setColorAt(1, red, green, blue);
+
+  // Update the LED, so that the colours show
+  led.show();
+
+  // Wait half a second, so we can see the LED's turn on
+  delay(500);
+
+  // Set the LED's to be off
+  red = 0;
+  green = 0;
+  blue = 0;
+
+  // Set LED 0 and LED 1 to the values
+  led.setColorAt(0, red, green, blue);
+  led.setColorAt(1, red, green, blue);
+
+  // Update the LED, so that the colours show
+  led.show();
+
+  // Wait half a second, so we can see the LED's turn off
+  delay(500);
+}
+
+void loop_LED_orange()
+{
+  // Turn on only orange
+  uint8_t red = 100;
+  uint8_t green = 70;
+  uint8_t blue = 0;
+
+  // Set LED 0 and LED 1 to the values
+  led.setColorAt(0, red, green, blue);
+  led.setColorAt(1, red, green, blue);
+
+  // Update the LED, so that the colours show
+  led.show();
+
+  // Wait half a second, so we can see the LED's turn on
+  delay(500);
+
+  // Set the LED's to be off
+  red = 0;
+  green = 0;
+  blue = 0;
+
+  // Set LED 0 and LED 1 to the values
+  led.setColorAt(0, red, green, blue);
+  led.setColorAt(1, red, green, blue);
+
+  // Update the LED, so that the colours show
+  led.show();
+
+  // Wait half a second, so we can see the LED's turn off
+  delay(500);
+}
+
+void loop_LED_purple()
+{
+  // Turn on only blue
+  uint8_t red = 70;
+  uint8_t green = 0;
+  uint8_t blue = 100;
+
+  // Set LED 0 and LED 1 to the values
+  led.setColorAt(0, red, green, blue);
+  led.setColorAt(1, red, green, blue);
+
+  // Update the LED, so that the colours show
+  led.show();
+
+  // Wait half a second, so we can see the LED's turn on
+  delay(500);
+
+  // Set the LED's to be off
+  red = 0;
+  green = 0;
+  blue = 0;
+
+  // Set LED 0 and LED 1 to the values
+  led.setColorAt(0, red, green, blue);
+  led.setColorAt(1, red, green, blue);
+
+  // Update the LED, so that the colours show
+  led.show();
+
+  // Wait half a second, so we can see the LED's turn off
+  delay(500);
+}
+
