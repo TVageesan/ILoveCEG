@@ -5,10 +5,11 @@
 MeLineFollower lineFinder(PORT_2); 
 MeDCMotor leftMotor(M1); // assigning leftMotor to port M1
 MeDCMotor rightMotor(M2); // assigning RightMotor to port M2
+MeRGBLed led(PORT_3);
 #define ULTRASONIC 12
 
 //variables
-#define TURN_TIME 330
+#define TURN_TIME 450
 #define TIMEOUT 1550
 #define FAST  200
 #define SLOW  160
@@ -22,33 +23,51 @@ float detect();
 int IR();
 
 //Movement Package
-void stop(){
-  leftMotor.run(0);
-  rightMotor.run(0);
+void move(int left, int right){
+  leftMotor.run(-left);
+  rightMotor.run(right);
 }
 
-void move(int left, int right, int time = TURN_TIME){ //supply {left} power to left motor, {right} power for right motor for {time} ms
+void adjustLeft(){
+  move(SLOW,FAST);
+}
+void adjustRight(){
+  move(FAST,SLOW);
+}
+
+void straight(){
+  move(FAST,FAST);
+}
+
+void stop(){
+  move(0,0);
+}
+
+void forward(int time){ //move forward for {time} ms
+  move(-FAST,FAST);
+  delay(time);
+}
+
+void turn(int left, int right, int time = TURN_TIME){ //supply {left} power to left motor, {right} power for right motor for {time} ms
   leftMotor.run(left);
   rightMotor.run(right);
   delay(time);
   stop();
 }
 
-void forward(int time){ //move forward for {time} ms
-  move(-FAST,FAST,time);
-}
+
 
 //left turn : red
 void left(){
-  move(SLOW,SLOW);
+  turn(SLOW,SLOW);
 } 
 //righ turn : green
 void right(){
-  move(-SLOW,-SLOW);
+  turn(-SLOW,-SLOW);
 }
 //spin in place : orange
 void spinaround(){
-  move(SLOW,SLOW,2*TURN_TIME);
+  turn(SLOW,SLOW,2*TURN_TIME);
 }
 //double left : purple
 void doubleleft(){
@@ -67,19 +86,6 @@ void end(){
   //celebrate();
 }
 
-void adjustLeft(){
-  leftMotor.run(-SLOW);
-  rightMotor.run(FAST);
-}
-void adjustRight(){
-  leftMotor.run(-FAST);
-  rightMotor.run(SLOW);
-}
-
-void straight(){
-  leftMotor.run(-FAST);
-  rightMotor.run(FAST);
-}
 
 void moveTillBlack(){ //relys mainly on 
     while (lineFinder.readSensors() == S1_OUT_S2_OUT){
@@ -92,7 +98,7 @@ void moveTillBlack(){ //relys mainly on
         else if (IR_VAL <= 260){ // 11-9cm -> GO RIGHT
           adjustRight();
         }
-        else if (IR_VAL <= 280){ //6-9cm -> STAY CENTER
+        else if (IR_VAL <= 300){ //6-9cm -> STAY CENTER
           straight();
         }
         else { // 0-6cm -> GO LEFT
@@ -100,16 +106,13 @@ void moveTillBlack(){ //relys mainly on
         }
       }
       else if (dist>13){ //if distance from right wall > 13cm, adjust right
-      leftMotor.run(-SLOW);
-      rightMotor.run(FAST);
+        adjustLeft();
       }
       else if (dist<8){ // if distance from right wall < 8 cm, adjust left
-        leftMotor.run(-FAST);
-        rightMotor.run(SLOW);
+        adjustRight();
       }
       else{ //8<dist<13 keep going straight
-        leftMotor.run(-FAST);
-        rightMotor.run(FAST);
+        straight();
       }
     }
     
@@ -117,10 +120,10 @@ void moveTillBlack(){ //relys mainly on
 
     //Nudge if slightly off 
     while (lineFinder.readSensors() == S1_OUT_S2_IN){
-      move(-SLOW,-SLOW,100);
+      turn(-SLOW,-SLOW,100);
     }
     while (lineFinder.readSensors() == S1_IN_S2_OUT){
-      move(SLOW,SLOW,100);
+      turn(SLOW,SLOW,100);
     }
 }
 
@@ -227,13 +230,14 @@ void colourAction(){
       Serial.println("orange");//180 TURN
       spinaround();
     }else{
+      loop_LED_red();
       Serial.println("red");//LEFT
       left();
     }
   }
   else {
     Serial.println("Burple");//DOUBLE LEFT
-    doubleleft();
+    //doubleleft();
   }
 }
 
@@ -248,14 +252,11 @@ void setup()
   pinMode(A1,OUTPUT);
   digitalWrite(A0,LOW);
   digitalWrite(A1,LOW);
-  //setBalance();
+  //while(analogRead(A7) < 100){};
 }   
 
 void loop(){
-  moveTillBlack();
-  delay(2000);
   colourAction();
-  
 }
 
 void loop_colour(){//testing colour calibration
@@ -265,8 +266,8 @@ void loop_colour(){//testing colour calibration
 }
 
 void final_loop() {
-  moveTillBlack();
-  delay(1000);
+  //moveTillBlack();
+  //delay(1000);
   colourAction();
 }
 
@@ -300,4 +301,139 @@ void loopRRR() {
   right();
   moveTillBlack();
   while(1){}
+}
+
+void flashColour(int red, int blue, int green){
+  // Set LED 0 and LED 1 to the values
+  led.setColorAt(0, red, green, blue);
+  led.setColorAt(1, red, green, blue);
+
+  // Update the LED, so that the colours show
+  led.show();
+
+  // Wait half a second, so we can see the LED's turn on
+  delay(500);
+
+  // Set the LED's to be off
+  red = 0;
+  green = 0;
+  blue = 0;
+
+  // Set LED 0 and LED 1 to the values
+  led.setColorAt(0, red, green, blue);
+  led.setColorAt(1, red, green, blue);
+
+  // Update the LED, so that the colours show
+  led.show();
+  
+  // Wait half a second, so we can see the LED's turn off
+  delay(500);
+
+}
+
+void loop_LED_blue()
+{
+  flashColour(0,0,100);
+}
+void loop_LED_red()
+{
+  flashColour(100,0,0);
+}
+void loop_LED_green()
+{
+  // Turn on only blue
+  uint8_t red = 0;
+  uint8_t green = 100;
+  uint8_t blue = 0;
+
+  // Set LED 0 and LED 1 to the values
+  led.setColorAt(0, red, green, blue);
+  led.setColorAt(1, red, green, blue);
+
+  // Update the LED, so that the colours show
+  led.show();
+
+  // Wait half a second, so we can see the LED's turn on
+  delay(500);
+
+  // Set the LED's to be off
+  red = 0;
+  green = 0;
+  blue = 0;
+
+  // Set LED 0 and LED 1 to the values
+  led.setColorAt(0, red, green, blue);
+  led.setColorAt(1, red, green, blue);
+
+  // Update the LED, so that the colours show
+  led.show();
+
+  // Wait half a second, so we can see the LED's turn off
+  delay(500);
+}
+
+void loop_LED_orange()
+{
+  // Turn on only orange
+  uint8_t red = 100;
+  uint8_t green = 70;
+  uint8_t blue = 0;
+
+  // Set LED 0 and LED 1 to the values
+  led.setColorAt(0, red, green, blue);
+  led.setColorAt(1, red, green, blue);
+
+  // Update the LED, so that the colours show
+  led.show();
+
+  // Wait half a second, so we can see the LED's turn on
+  delay(500);
+
+  // Set the LED's to be off
+  red = 0;
+  green = 0;
+  blue = 0;
+
+  // Set LED 0 and LED 1 to the values
+  led.setColorAt(0, red, green, blue);
+  led.setColorAt(1, red, green, blue);
+
+  // Update the LED, so that the colours show
+  led.show();
+
+  // Wait half a second, so we can see the LED's turn off
+  delay(500);
+}
+
+void loop_LED_purple()
+{
+  // Turn on only blue
+  uint8_t red = 70;
+  uint8_t green = 0;
+  uint8_t blue = 100;
+
+  // Set LED 0 and LED 1 to the values
+  led.setColorAt(0, red, green, blue);
+  led.setColorAt(1, red, green, blue);
+
+  // Update the LED, so that the colours show
+  led.show();
+
+  // Wait half a second, so we can see the LED's turn on
+  delay(500);
+
+  // Set the LED's to be off
+  red = 0;
+  green = 0;
+  blue = 0;
+
+  // Set LED 0 and LED 1 to the values
+  led.setColorAt(0, red, green, blue);
+  led.setColorAt(1, red, green, blue);
+
+  // Update the LED, so that the colours show
+  led.show();
+
+  // Wait half a second, so we can see the LED's turn off
+  delay(500);
 }
