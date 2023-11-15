@@ -189,9 +189,9 @@ void colourDetect(){ //Debug fn
   Serial.print("red:");
   Serial.println(colourArray[0]);
   Serial.print("blue: ");
-  Serial.println(colourArray[2]);
-  Serial.print("green: ");
   Serial.println(colourArray[1]);
+  Serial.print("green: ");
+  Serial.println(colourArray[2]);
 }
 
 //TODO: REPLACE SERIAL PRINTS WITH LED FLASHES
